@@ -66,7 +66,7 @@
      (* (vz a) (vz b))))
 
 (defun vlength (v)
-  (sqrt (+ (* (vx v) (vx v)) (* (vy v) (vy v)) (* (vz v) (vz v)))))
+  (sqrt (vdot v v)))
 
 (defun vnormalize! (a)
   (let ((l (vlength a)))
