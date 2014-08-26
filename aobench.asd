@@ -12,6 +12,7 @@
 
 
 (defmethod perform ((o test-op) (c (eql (find-system '#:aobench))))
-  (time (funcall (find-symbol (symbol-name '#:render)
-			      (find-package '#:aobench))
-		 256 256 2)))
+  (let ((pkg (find-package '#:aobench)))
+    (format t "AO SAMPLES: 8~%SUBSAMPLING: 2~%WIDTH: 256~%HEIGHT: 256~%")
+    (time (funcall (intern (string '#:render) pkg) 256 256 2))
+    (format t "ok.")))
