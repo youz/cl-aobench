@@ -2,6 +2,8 @@
 
 [aobench](http://code.google.com/p/aobench/) in CommonLisp
 
+![output image](output_pgm.png)
+
 
 ## usage
 ```
