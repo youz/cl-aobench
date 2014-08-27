@@ -187,31 +187,39 @@
 	      (incf occlusion)))))
       (- 1 (/ occlusion ntheta nphi)))))
 
-
-(declaim (ftype (function (int int int) (array (unsigned-byte 8))) render))
-(defun render (w h nsubs)
-  (let ((image (make-array (list w h) :element-type '(unsigned-byte 8)))
-	(hw (/ w 2d0))
+(declaim (ftype (function ((array (unsigned-byte 8)) int int int int)) render-1line))
+(defun render-1line (image y w h nsubs)
+  (let ((hw (/ w 2d0))
 	(hh (/ h 2d0)))
-    (dotimes (y h)
-      (dotimes (x w)
-	(let ((rad 0d0))
-	  (declare (type num rad))
-	  ;; subsampling
-	  (dotimes (v nsubs)
-	    (dotimes (u nsubs)
-	      (let* ((px (/ (+ x (/ u nsubs) (- hw)) hw))
-		     (py (- (/ (+ y (/ v nsubs) (- hh)) hh)))
-		     (eye (vnormalize! (vec px py -1d0)))
-		     (ray (make-ray :org (vec 0d0 0d0 0d0) :dir eye))
-		     (isect (make-isect)))
-		(loop for f across *scene* do
-		  (funcall (the (function (ray isect)) f) ray isect))
-		(when (isect-hit isect)
-		  (incf rad (ambient-occlusion isect))))))
-	  (setf (aref image x y) (clamp (/ rad nsubs nsubs))))))
-    image))
+    (dotimes (x w)
+      (let ((rad 0d0))
+	(declare (type num rad))
+	;; subsampling
+	(dotimes (v nsubs)
+	  (dotimes (u nsubs)
+	    (let* ((px (/ (+ x (/ u nsubs) (- hw)) hw))
+		   (py (- (/ (+ y (/ v nsubs) (- hh)) hh)))
+		   (eye (vnormalize! (vec px py -1d0)))
+		   (ray (make-ray :org (vec 0d0 0d0 0d0) :dir eye))
+		   (isect (make-isect)))
+	      (loop for f across *scene* do
+		(funcall (the (function (ray isect)) f) ray isect))
+	      (when (isect-hit isect)
+		(incf rad (ambient-occlusion isect))))))
+	(setf (aref image x y) (clamp (/ rad nsubs nsubs)))))))
 
+(declaim (ftype (function (int int int int) (array (unsigned-byte 8))) render))
+(defun render (w h nsubs n-threads)
+  (let ((image (make-array (list w h) :element-type '(unsigned-byte 8))))
+    (if (= n-threads 1)
+	(dotimes (y h)
+	  (render-1line image y w h nsubs))
+      (let* ((lparallel:*kernel* (lparallel:make-kernel n-threads))
+	     (ch (lparallel:make-channel)))
+	(dotimes (y h)
+	  (lparallel:submit-task ch #'render-1line image y w h nsubs))
+	(lparallel:end-kernel :wait t)))
+    image))
 
 
 (defun write-pnm (file image w h)
@@ -227,13 +235,16 @@
   t)
 
 
-(defun run (&key (file *pgm-filename*) (w *image-width*) (h *image-height*))
-  (format t "AO SAMPLES: ~D~%SUBSAMPLING: ~D~%WIDTH: ~D~%HEIGHT: ~D~%"
-	  *nao-samples* *nsubsamples* w h)
+(defun run (&key (file *pgm-filename*)
+		 (w *image-width*)
+		 (h *image-height*)
+		 (subsamples *nsubsamples*)
+		 (n-threads 1))
+  (format t "AO SAMPLES: ~D~%SUBSAMPLING: ~D~%WIDTH: ~D~%HEIGHT: ~D~%THREADS: ~D~%"
+	  *nao-samples* subsamples w h n-threads)
   (format t "writing ~A" file)
-  (let ((img (time (render w h *nsubsamples*))))
+  (let ((img (time (render w h subsamples n-threads))))
     (write-pnm file img w h))
   (format t "~&done.")
   t)
-
 
