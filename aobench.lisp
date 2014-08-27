@@ -231,7 +231,7 @@
     (dotimes (y h)
       (dotimes (x w)
 	(let ((p (aref image x y)))
-	  (format s "~D~%" p)))))
+	  (format s "~[~&~:; ~]~D" x p)))))
   t)
 
 
