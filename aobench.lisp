@@ -245,6 +245,6 @@
   (format t "writing ~A" file)
   (let ((img (time (render w h subsamples n-threads))))
     (write-pnm file img w h))
-  (format t "~&done.")
+  (format t "done.~%")
   t)
 
