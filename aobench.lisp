@@ -225,7 +225,7 @@
 (defun write-pnm (file image w h)
   (declare (type int w h))
   (with-open-file (s file :direction :output
-		     :if-exists :overwrite :if-does-not-exist :create)
+		     :if-exists :supersede :if-does-not-exist :create)
     (declare (type stream s))
     (format s "P2~%~D ~D~%255~%" w h)
     (dotimes (y h)
